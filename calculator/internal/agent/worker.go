@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 )
 
@@ -17,7 +19,15 @@ type Task struct {
 	OperationTime int     `json:"operation_time"`
 }
 
+var (
+	timeAdditionMS        int
+	timeSubtractionMS     int
+	timeMultiplicationsMS int
+	timeDivisionsMS       int
+)
+
 func Run() {
+	loadEnvValues()
 	for {
 		task, err := getTask()
 		if err != nil {
@@ -49,7 +59,21 @@ func getTask() (Task, error) {
 }
 
 func performTask(task Task) float64 {
-	time.Sleep(time.Duration(task.OperationTime) * time.Millisecond)
+	var delay int
+	switch task.Operation {
+	case "+":
+		delay = timeAdditionMS
+	case "-":
+		delay = timeSubtractionMS
+	case "*":
+		delay = timeMultiplicationsMS
+	case "/":
+		delay = timeDivisionsMS
+	default:
+		delay = 0
+	}
+
+	time.Sleep(time.Duration(delay) * time.Millisecond)
 	switch task.Operation {
 	case "+":
 		return task.Arg1 + task.Arg2
@@ -73,4 +97,26 @@ func submitResult(id string, result float64) {
 		"result": result,
 	})
 	http.Post("http://localhost:8080/internal/task", "application/json", bytes.NewBuffer(data))
+}
+func loadEnvValues() {
+	var err error
+	timeAdditionMS, err = strconv.Atoi(os.Getenv("TIME_ADDITION_MS"))
+	if err != nil {
+		log.Fatalf("Ошибка загрузки переменной среды TIME_ADDITION_MS: %v", err)
+	}
+
+	timeSubtractionMS, err = strconv.Atoi(os.Getenv("TIME_SUBTRACTION_MS"))
+	if err != nil {
+		log.Fatalf("Ошибка загрузки переменной среды TIME_SUBTRACTION_MS: %v", err)
+	}
+
+	timeMultiplicationsMS, err = strconv.Atoi(os.Getenv("TIME_MULTIPLICATIONS_MS"))
+	if err != nil {
+		log.Fatalf("Ошибка загрузки переменной среды TIME_MULTIPLICATIONS_MS: %v", err)
+	}
+
+	timeDivisionsMS, err = strconv.Atoi(os.Getenv("TIME_DIVISIONS_MS"))
+	if err != nil {
+		log.Fatalf("Ошибка загрузки переменной среды TIME_DIVISIONS_MS: %v", err)
+	}
 }
